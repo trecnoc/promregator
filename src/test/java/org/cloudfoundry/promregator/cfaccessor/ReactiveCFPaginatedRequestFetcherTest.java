@@ -188,6 +188,35 @@ class ReactiveCFPaginatedRequestFetcherTest {
 	}
 
 	@Test
+	void testWithContentTwoPagesV3() {
+		ReactiveCFPaginatedRequestFetcher subject = new ReactiveCFPaginatedRequestFetcher(this.internalMetricsMocked, 0, Duration.ofMillis(100));
+
+		Mono<org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse> subjectResponseMono = subject
+			.performGenericPagedRetrievalV3(RequestType.OTHER, "nokey", requestGeneratorV3, request -> {
+				LinkedList<org.cloudfoundry.client.v3.organizations.OrganizationResource> list = new LinkedList<>();
+
+				for (int i = 0; i < request.getPerPage(); i++) {
+					list.add(org.cloudfoundry.client.v3.organizations.OrganizationResource.builder().createdAt("").id("").metadata(Metadata.builder().build()).name("").build());
+				}
+
+				org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse response = org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse
+					.builder()
+					.resources(list)
+					.pagination(Pagination.builder().totalPages(2)
+										  .totalResults(2 * request.getPerPage()).build())
+					.build();
+
+				return Mono.just(response);
+			}, 100, responseGeneratorV3);
+
+		org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse subjectResponse = subjectResponseMono.block();
+		Assertions.assertEquals(2, subjectResponse.getPagination().getTotalPages().intValue());
+		Assertions.assertEquals(2 * 100, subjectResponse.getPagination().getTotalResults().intValue());
+		Assertions.assertNotNull(subjectResponse.getResources());
+		Assertions.assertEquals(2 * 100, subjectResponse.getResources().size());
+	}
+
+	@Test
 	void testWithContentTwoPagesSecondWithoutItems() {
 		ReactiveCFPaginatedRequestFetcher subject = new ReactiveCFPaginatedRequestFetcher(this.internalMetricsMocked, Double.MAX_VALUE, Duration
 			.ofMillis(100));
@@ -215,6 +244,38 @@ class ReactiveCFPaginatedRequestFetcherTest {
 		ListOrganizationsResponse subjectResponse = subjectResponseMono.block();
 		Assertions.assertEquals(2, subjectResponse.getTotalPages().intValue());
 		Assertions.assertEquals(1 * 100, subjectResponse.getTotalResults().intValue());
+		Assertions.assertNotNull(subjectResponse.getResources());
+		Assertions.assertEquals(1 * 100, subjectResponse.getResources().size());
+	}
+
+	@Test
+	void testWithContentTwoPagesSecondWithoutItemsV3() {
+		ReactiveCFPaginatedRequestFetcher subject = new ReactiveCFPaginatedRequestFetcher(this.internalMetricsMocked, Double.MAX_VALUE, Duration
+			.ofMillis(100));
+
+		Mono<org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse> subjectResponseMono = subject
+			.performGenericPagedRetrievalV3(RequestType.OTHER, "nokey", requestGeneratorV3, request -> {
+				LinkedList<org.cloudfoundry.client.v3.organizations.OrganizationResource> list = new LinkedList<>();
+
+				if (request.getPage() == 1) {
+					for (int i = 0; i < request.getPerPage(); i++) {
+						list.add(org.cloudfoundry.client.v3.organizations.OrganizationResource.builder().createdAt("").id("").metadata(Metadata.builder().build()).name("").build());
+					}
+				}
+
+				org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse response = org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse
+					.builder()
+					.resources(list)
+					.pagination(Pagination.builder().totalPages(2)
+										  .totalResults((2 - request.getPerPage()) * request.getPerPage()).build())
+					.build();
+
+				return Mono.just(response);
+			}, 100, responseGeneratorV3);
+
+		org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse subjectResponse = subjectResponseMono.block();
+		Assertions.assertEquals(2, subjectResponse.getPagination().getTotalPages().intValue());
+		Assertions.assertEquals(1 * 100, subjectResponse.getPagination().getTotalResults().intValue());
 		Assertions.assertNotNull(subjectResponse.getResources());
 		Assertions.assertEquals(1 * 100, subjectResponse.getResources().size());
 	}
@@ -295,6 +356,44 @@ class ReactiveCFPaginatedRequestFetcherTest {
 	}
 
 	@Test
+	void testWithContentTimeoutOnSecondPageV3() {
+		ReactiveCFPaginatedRequestFetcher subject = new ReactiveCFPaginatedRequestFetcher(this.internalMetricsMocked, Double.MAX_VALUE, Duration
+			.ofMillis(100));
+
+		Mono<org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse> subjectResponseMono = subject
+			.performGenericPagedRetrievalV3(RequestType.OTHER, "nokey", requestGeneratorV3, request -> {
+				if (request.getPage() == 2) {
+					return Mono.error(new TimeoutException());
+				}
+
+				LinkedList<org.cloudfoundry.client.v3.organizations.OrganizationResource> list = new LinkedList<>();
+
+				if (request.getPage() == 1) {
+					for (int i = 0; i < request.getPerPage(); i++) {
+						list.add(org.cloudfoundry.client.v3.organizations.OrganizationResource.builder().createdAt("").id("").metadata(Metadata.builder().build()).name("").build());
+					}
+				}
+
+				org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse response = org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse
+					.builder()
+					.resources(list)
+				.pagination(Pagination.builder().totalPages(2)
+									 .totalResults(2 * request.getPerPage()).build())
+					.build();
+
+				return Mono.just(response);
+			}, 100, responseGeneratorV3);
+
+		org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse fallback = org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse.builder().build();
+
+		org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse subjectResponse = subjectResponseMono.doOnError(e ->
+																					  Assertions.assertTrue(Exceptions
+																												.unwrap(e) instanceof TimeoutException)
+		).onErrorReturn(fallback).block();
+		Assertions.assertEquals(fallback, subjectResponse);
+	}
+
+	@Test
 	void testWithContentGeneralException() {
 		ReactiveCFPaginatedRequestFetcher subject = new ReactiveCFPaginatedRequestFetcher(this.internalMetricsMocked, Double.MAX_VALUE, Duration
 			.ofMillis(100));
@@ -306,6 +405,23 @@ class ReactiveCFPaginatedRequestFetcherTest {
 		ListOrganizationsResponse fallback = ListOrganizationsResponse.builder().build();
 
 		ListOrganizationsResponse subjectResponse = subjectResponseMono.doOnError(e ->
+																					  Assertions.assertTrue(Exceptions.unwrap(e) instanceof Exception)
+		).onErrorReturn(fallback).block();
+		Assertions.assertEquals(fallback, subjectResponse);
+	}
+
+	@Test
+	void testWithContentGeneralExceptionV3() {
+		ReactiveCFPaginatedRequestFetcher subject = new ReactiveCFPaginatedRequestFetcher(this.internalMetricsMocked, Double.MAX_VALUE, Duration
+			.ofMillis(100));
+
+		Mono<org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse> subjectResponseMono = subject
+			.performGenericPagedRetrievalV3(RequestType.OTHER, "nokey", requestGeneratorV3, request ->
+				Mono.error(new Exception()), 100, responseGeneratorV3);
+
+		org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse fallback = org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse.builder().build();
+
+		org.cloudfoundry.client.v3.organizations.ListOrganizationsResponse subjectResponse = subjectResponseMono.doOnError(e ->
 																					  Assertions.assertTrue(Exceptions.unwrap(e) instanceof Exception)
 		).onErrorReturn(fallback).block();
 		Assertions.assertEquals(fallback, subjectResponse);

@@ -93,7 +93,7 @@ public class CFAccessorCacheCaffeineSpringApplication {
 
 		@Override
 		public Mono<GetSpaceResponse> retrieveSpaceV3(String spaceId) {
-			return Mono.just(GetSpaceResponse.builder().build());
+			return Mono.just(GetSpaceResponse.builder().id(spaceId).name("dummy").createdAt("time").build());
 		}
 
 		@Override
