@@ -233,7 +233,7 @@ public class ReactiveCFAccessorImpl implements CFAccessor {
 		// Ensures v3 API exists. The CF Java Client does not yet implement the info endpoint for V3, so we do it manually.
 		JsonNode v3Info = new ReactorInfoV3(this.cloudFoundryClient.getConnectionContext(), this.cloudFoundryClient.getRootV3(),
 											this.cloudFoundryClient.getTokenProvider(), this.cloudFoundryClient.getRequestTags())
-			.get(null).onErrorReturn(JsonNodeFactory.instance.nullNode()).block();
+			.get().onErrorReturn(JsonNodeFactory.instance.nullNode()).block();
 
 		if (v3Info == null || v3Info.isNull()) {
 			log.warn("unable to get v3 info endpoint of CF platform");

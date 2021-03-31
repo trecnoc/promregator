@@ -19,8 +19,8 @@ public class ReactorInfoV3 extends AbstractClientV3Operations {
 		super(connectionContext, root, tokenProvider, requestTags);
 	}
 
-	public Mono<JsonNode> get(Object request) {
-		return get(request, JsonNode.class, builder -> builder.pathSegment("info"))
+	public Mono<JsonNode> get() {
+		return get(null, JsonNode.class, builder -> builder.pathSegment("info"))
 			.checkpoint();
 	}
 }
