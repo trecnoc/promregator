@@ -20,7 +20,7 @@ public class ReactorInfoV3 extends AbstractClientV3Operations {
 	}
 
 	public Mono<JsonNode> get() {
-		return get(null, JsonNode.class, builder -> builder.pathSegment("info"))
+		return get("", JsonNode.class, builder -> builder.pathSegment("info"))
 			.checkpoint();
 	}
 }
