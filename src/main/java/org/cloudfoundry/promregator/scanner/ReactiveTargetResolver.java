@@ -450,10 +450,8 @@ public class ReactiveTargetResolver implements TargetResolver {
 							  return Mono.just(it);
 						  }).findFirst().orElseGet(Mono::empty);
 			}).doOnError(e ->
-									log.warn(String
-												 .format("Error on retrieving application annotations for org '%s', space '%s' and application '%s'.", it
-													 .getResolvedOrgName(), it.getResolvedSpaceName(), it.getConfigTarget()
-																										 .getApplicationName()), e)).flux();
+				 log.warn(String.format("Error on retrieving application annotations for org '%s', space '%s' and application '%s'.",
+										it.getResolvedOrgName(), it.getResolvedSpaceName(), it.getConfigTarget().getApplicationName()), e)).flux();
 		}
 
 		return Mono.just(it).flux();
